@@ -1,6 +1,10 @@
 # ExemploRabbitMq
 
-Realizando a comunicação entre: Microservices utilizando o RabbitMq e RPC.
+Realizando a comunicação entre: Microservices utilizando o RabbitMq e Remote procedure call (RPC).
 
-API Gateway --publicação-> RabbitMq <-consumo-- API de produtos
-API Gateway --consumo-> RabbitMq <-publicação-- API de produtos
+<ul>
+<li>API Gateway --publicação->   RabbitMq  <-consumo-- API de produtos</li>
+<li>API Gateway --consumo->   RabbitMq  <-publicação-- API de produtos</li>
+</ul>
+
+
