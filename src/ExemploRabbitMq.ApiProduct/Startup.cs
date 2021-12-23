@@ -24,8 +24,6 @@ namespace ExemploRabbitMq.ApiProduct
 
             services.Configure<RabbitMqConfiguration>(Configuration.GetSection("RabbitMqConfig"));
 
-            services.AddHosted();
-
             services.AddServices();
 
             services.AddSwaggerGen(c =>

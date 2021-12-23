@@ -4,6 +4,7 @@ using ExemploRabbitMq.DTO.Dtos;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using System.Text;
 
 namespace ExemploRabbitMq.Application.Services
@@ -30,19 +31,46 @@ namespace ExemploRabbitMq.Application.Services
                 using (var channel = connection.CreateModel())
                 {
                     channel.QueueDeclare(
-                        queue: message.Domain,
+                        queue: message.ReplyQueue,
                         durable: false,
                         exclusive: false,
                         autoDelete: false,
                         arguments: null);
+
+                    channel.QueueDeclare(
+                        queue: message.Queue,
+                        durable: false,
+                        exclusive: false,
+                        autoDelete: false,
+                        arguments: null);
+
+                    var consumer = new EventingBasicConsumer(channel);
+
+                    consumer.Received += (model, ea) =>
+                    {
+                        if (message.CorrelationId.ToString() == ea.BasicProperties.CorrelationId)
+                        {
+                            var body = ea.Body.ToArray();
+                            var message = Encoding.UTF8.GetString(body);
+
+                            return;
+                        }
+                    };
+
+                    channel.BasicConsume(queue: message.ReplyQueue, autoAck: true, consumer: consumer);
+
+                    var props = channel.CreateBasicProperties();
+
+                    props.CorrelationId = message.CorrelationId.ToString(); ;
+                    props.ReplyTo = message.ReplyQueue; ;
 
                     var stringfiedMessage = JsonConvert.SerializeObject(message);
                     var bytesMessage = Encoding.UTF8.GetBytes(stringfiedMessage);
 
                     channel.BasicPublish(
                         exchange: "",
-                        routingKey: message.Domain,
-                        basicProperties: null,
+                        routingKey: message.Queue,
+                        basicProperties: props,
                         body: bytesMessage);
                 }
             }

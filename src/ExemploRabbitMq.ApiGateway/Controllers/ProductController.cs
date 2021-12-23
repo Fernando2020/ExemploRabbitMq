@@ -27,12 +27,15 @@ namespace ExemploRabbitMq.ApiGateway.Controllers
             {
                 var message = new MessageInputModel()
                 {
-                    Domain = DomainConstant.PRODUCT,
+                    CorrelationId = Guid.NewGuid(),
+                    Queue = DomainConstant.PRODUCT,
+                    ReplyQueue = $"{DomainConstant.PRODUCT}_response",
                     Method = "GET",
-                    Content = "Teste",
+                    Content = string.Empty,
                 };
 
                 _rabbitMqGateway.Publish(message);
+
                 return Accepted();
             }
             catch (Exception e)

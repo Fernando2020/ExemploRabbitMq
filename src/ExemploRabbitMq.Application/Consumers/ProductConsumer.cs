@@ -21,6 +21,7 @@ namespace ExemploRabbitMq.Application.Consumers
         private readonly IConnection _connection;
         private readonly IModel _channel;
         private readonly IServiceProvider _serviceProvider;
+
         public ProductConsumer(IOptions<RabbitMqConfiguration> option, IServiceProvider serviceProvider)
         {
             _configuration = option.Value;
@@ -33,41 +34,68 @@ namespace ExemploRabbitMq.Application.Consumers
 
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();
+
             _channel.QueueDeclare(
                         queue: DomainConstant.PRODUCT,
                         durable: false,
                         exclusive: false,
                         autoDelete: false,
                         arguments: null);
+
+            _channel.BasicQos(0, 1, false);
         }
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
             var consumer = new EventingBasicConsumer(_channel);
-
+            
             consumer.Received += (sender, eventArgs) =>
             {
-                var contentArray = eventArgs.Body.ToArray();
-                var contentString = Encoding.UTF8.GetString(contentArray);
-                var message = JsonConvert.DeserializeObject<MessageInputModel>(contentString);
+                try
+                {
+                    var contentArray = eventArgs.Body.ToArray();
+                    var incommingMessage = Encoding.UTF8.GetString(contentArray);
+                    var message = JsonConvert.DeserializeObject<MessageInputModel>(incommingMessage);
 
-                ResponseMessage(message);
+                    var replyMessage = InvokeService(message);
+                    SendReplyMessage(replyMessage, eventArgs);
 
-                _channel.BasicAck(eventArgs.DeliveryTag, false);
+                    _channel.BasicAck(eventArgs.DeliveryTag, false);
+                }
+                catch
+                {
+                    _channel.BasicNack(eventArgs.DeliveryTag, false, true);
+                }
             };
 
-            _channel.BasicConsume(DomainConstant.PRODUCT, false, consumer);
+            _channel.BasicConsume(queue: DomainConstant.PRODUCT, autoAck: false, consumer: consumer);
 
             return Task.CompletedTask;
         }
 
-        public void ResponseMessage(MessageInputModel message)
+        private void SendReplyMessage(string message, BasicDeliverEventArgs eventArgs)
+        {
+            var props = eventArgs.BasicProperties;
+            var replyProps = _channel.CreateBasicProperties();
+
+            replyProps.CorrelationId = props.CorrelationId;
+
+            var body = Encoding.UTF8.GetBytes(message);
+
+            _channel.BasicPublish(
+                    exchange: "",
+                    routingKey: props.ReplyTo,
+                    basicProperties: replyProps,
+                    body: body);
+        }
+
+        private string InvokeService(MessageInputModel message)
         {
             using (var scope = _serviceProvider.CreateScope())
             {
                 var productService = scope.ServiceProvider.GetRequiredService<IProductService>();
 
-                dynamic response = null;
+                dynamic response = string.Empty;
 
                 switch (message.Method)
                 {
@@ -78,8 +106,7 @@ namespace ExemploRabbitMq.Application.Consumers
                         break;
                 }
 
-                var stringfiedMessage = JsonConvert.SerializeObject(response);
-
+                return JsonConvert.SerializeObject(response);
             }
         }
     }
