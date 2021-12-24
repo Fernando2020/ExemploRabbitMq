@@ -1,9 +1,11 @@
 ﻿using ExemploRabbitMq.Application.Constants;
 using ExemploRabbitMq.Application.Interfaces;
+using ExemploRabbitMq.Domain.Domains;
 using ExemploRabbitMq.DTO.Dtos;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Collections.Generic;
 
 namespace ExemploRabbitMq.ApiGateway.Controllers
 {
@@ -11,12 +13,12 @@ namespace ExemploRabbitMq.ApiGateway.Controllers
     [ApiController]
     public class ProductController : ControllerBase
     {
-        private readonly IRabbitMqGateway _rabbitMqGateway;
+        private readonly IRpcClientService _rpcClient;
         private readonly ILogger<ProductController> _logger;
 
-        public ProductController(IRabbitMqGateway rabbitMqGateway, ILogger<ProductController> logger)
+        public ProductController(IRpcClientService rpcClient, ILogger<ProductController> logger)
         {
-            _rabbitMqGateway = rabbitMqGateway;
+            _rpcClient = rpcClient;
             _logger = logger;
         }
 
@@ -27,16 +29,18 @@ namespace ExemploRabbitMq.ApiGateway.Controllers
             {
                 var message = new MessageInputModel()
                 {
-                    CorrelationId = Guid.NewGuid(),
                     Queue = DomainConstant.PRODUCT,
                     ReplyQueue = $"{DomainConstant.PRODUCT}_response",
                     Method = "GET",
                     Content = string.Empty,
                 };
 
-                _rabbitMqGateway.Publish(message);
+                var response = _rpcClient.Call(message);
+                _rpcClient.Close();
 
-                return Accepted();
+                var products = System.Text.Json.JsonSerializer.Deserialize<List<Product>>(response);
+
+                return Ok(products);
             }
             catch (Exception e)
             {

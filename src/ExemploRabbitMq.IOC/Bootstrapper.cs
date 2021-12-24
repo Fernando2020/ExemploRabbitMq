@@ -1,4 +1,5 @@
-﻿using ExemploRabbitMq.Application.Consumers;
+﻿using ExemploRabbitMq.ApiGateway.RabbitMqClient;
+using ExemploRabbitMq.Application.Consumers;
 using ExemploRabbitMq.Application.Interfaces;
 using ExemploRabbitMq.Application.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -10,7 +11,7 @@ namespace ExemploRabbitMq.IOC
         public static IServiceCollection AddServices(this IServiceCollection services)
         {
             services
-                .AddScoped<IRabbitMqGateway, RabbitMqGateway>()
+                .AddScoped<IRpcClientService, RpcClientService>()
                 .AddScoped<IProductService, ProductService>();
 
             return services;
