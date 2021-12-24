@@ -30,8 +30,7 @@ namespace ExemploRabbitMq.ApiGateway.Controllers
                 var message = new MessageInputModel()
                 {
                     Queue = DomainConstant.PRODUCT,
-                    ReplyQueue = $"{DomainConstant.PRODUCT}_response",
-                    Method = "GET",
+                    Method = MethodConstant.GET,
                     Content = string.Empty,
                 };
 

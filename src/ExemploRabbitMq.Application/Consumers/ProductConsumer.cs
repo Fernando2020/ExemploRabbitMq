@@ -97,7 +97,7 @@ namespace ExemploRabbitMq.Application.Consumers
 
                 switch (message.Method)
                 {
-                    case "GET":
+                    case MethodConstant.GET:
                         response = productService.Get();
                         break;
                     default:
